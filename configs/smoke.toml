@@ -1,0 +1,30 @@
+# Smoke run for the trainer: a tiny MoE model on a few packed steps.
+
+[model]
+vocab = 48
+d_model = 24
+n_heads = 2
+ctx = 32
+positions = "rope"
+mixers = ["attn", "conv", "scan"]
+conv_kernel = 3
+mlp = "moe"
+d_ff = 32
+experts = 4
+top_k = 2
+capacity_factor = 1.0
+
+[train]
+lr = 0.01
+warmup = 2
+weight_decay = 0.01
+betas = [0.9, 0.95]
+eps = 1e-8
+clip = 1.0
+balance_coef = 0.02
+z_coef = 0.001
+
+[run]
+shards = "../data/smoke/shards"
+init = "../runs/smoke/init.npz"
+out = "../runs/smoke/final.npz"
