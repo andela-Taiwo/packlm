@@ -1,3 +1,46 @@
+[project]
+name = "packlm"
+version = "0.2.0"
+description = "Small decoder-only LMs trained on packed step shards, on CPU in float64."
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Taiwo Sokunbi" }]
+requires-python = ">=3.11,<3.14"
+dependencies = [
+    "numpy==2.3.3",
+    "torch==2.8.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest==9.2.0",
+    "ruff==0.17.4",
+]
+
+[tool.uv]
+# lm is run from the repository root (python -m lm.train), not installed.
+package = false
+required-version = ">=0.9.5"
+
+# CPU-only PyTorch on Linux and Windows; macOS wheels on PyPI are CPU builds already.
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu", marker = "sys_platform != 'darwin'" }]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["lm", "conftest"]
