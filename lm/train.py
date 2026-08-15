@@ -4,9 +4,11 @@
 """
 
 import argparse
+import logging
 import math
 import os
 import sys
+import time
 
 import numpy as np
 import torch
@@ -14,8 +16,11 @@ import torch.nn.functional as F
 
 from lm.config import load_config
 from lm.data import micro_batches, step_shards
+from lm.log import event, get_logger
 from lm.model import DTYPE, LM
 from lm.weights import load_weights, save_weights
+
+log = get_logger("lm.train")
 
 
 def lr_at(cfg, step):
@@ -54,7 +59,11 @@ def train(cfg):
     shards = step_shards(cfg.shards)
     if cfg.steps is not None:
         shards = shards[: cfg.steps]
+    event(log, logging.INFO, "run_start", shards=len(shards), mixers=list(cfg.model.mixers), mlp=cfg.model.mlp,
+          experts=cfg.model.experts, top_k=cfg.model.top_k, capacity_factor=cfg.model.capacity_factor, out=cfg.out)
+    started = time.perf_counter()
     for step, path in enumerate(shards, 1):
+        step_started = time.perf_counter()
         mbs = list(micro_batches(path))
         n_micro = len(mbs)
         opt.zero_grad(set_to_none=True)
@@ -81,8 +90,12 @@ def train(cfg):
         opt.step()
         print(f"step {step} | loss {tot:.12e} | ce {ce_t:.12e} | balance {bal_t:.12e} | z {z_t:.12e} "
               f"| targets {n_tgt} | gnorm {gnorm:.12e}", flush=True)
+        event(log, logging.DEBUG, "step_done", step=step, shard=os.path.basename(path), micro_batches=n_micro,
+              targets=n_tgt, loss=tot, gnorm=gnorm, seconds=round(time.perf_counter() - step_started, 4))
     os.makedirs(os.path.dirname(cfg.out) or ".", exist_ok=True)
     save_weights(model, cfg.out)
+    event(log, logging.INFO, "run_done", steps=len(shards), out=cfg.out,
+          seconds=round(time.perf_counter() - started, 3))
     print(f"wrote {cfg.out}", flush=True)
 
 
@@ -90,7 +103,12 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--config", required=True)
     args = ap.parse_args(argv)
-    train(load_config(args.config))
+    try:
+        cfg = load_config(args.config)
+    except (KeyError, ValueError) as exc:
+        event(log, logging.ERROR, "config_refused", config=args.config, reason=str(exc))
+        raise
+    train(cfg)
 
 
 if __name__ == "__main__":

@@ -4,11 +4,15 @@
 """
 
 import argparse
+import logging
 import os
 
 from lm.config import load_config
+from lm.log import event, get_logger
 from lm.model import LM, init_weights
 from lm.weights import save_weights
+
+log = get_logger("lm.init")
 
 
 def main(argv=None):
@@ -21,6 +25,8 @@ def main(argv=None):
     init_weights(model, args.seed)
     os.makedirs(os.path.dirname(cfg.init) or ".", exist_ok=True)
     save_weights(model, cfg.init)
+    event(log, logging.INFO, "init_written", path=cfg.init, seed=args.seed,
+          parameters=sum(p.numel() for p in model.parameters()))
     print(f"wrote {cfg.init}")
 
 

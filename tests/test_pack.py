@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+
 from lm.pack import BOS, EOS, pack_step, windows
 
 
@@ -37,5 +38,5 @@ def test_shuffled_is_repeatable_for_a_seed():
     docs = [[i] * (i % 4 + 1) for i in range(3, 20)]
     a = pack_step(docs, ctx=8, micro=1, layout="shuffled", seed=7)
     b = pack_step(docs, ctx=8, micro=1, layout="shuffled", seed=7)
-    for x, y in zip(a, b):
+    for x, y in zip(a, b, strict=True):
         np.testing.assert_array_equal(x, y)

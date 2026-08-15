@@ -9,8 +9,8 @@ import pytest
 ROOT = Path(__file__).resolve().parent.parent
 
 
-def run_module(module, *args, cwd):
-    env = dict(os.environ, PYTHONPATH=str(ROOT), OMP_NUM_THREADS="1")
+def run_module(module, *args, cwd, env=None):
+    env = dict(os.environ, PYTHONPATH=str(ROOT), OMP_NUM_THREADS="1", **(env or {}))
     return subprocess.run(
         [sys.executable, "-m", module, *args],
         cwd=cwd, env=env, capture_output=True, text=True, check=False,

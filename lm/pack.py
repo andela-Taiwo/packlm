@@ -12,10 +12,15 @@ the step is written as step_NNNNNN.npz, one set of arrays per micro-batch.
 
 import argparse
 import json
+import logging
 import os
 import random
 
 import numpy as np
+
+from lm.log import event, get_logger
+
+log = get_logger("lm.pack")
 
 PAD, BOS, EOS = 0, 1, 2
 
@@ -106,6 +111,10 @@ def main(argv=None):
     for n in sorted(steps):
         packed = pack_step(steps[n], args.ctx, args.micro_batches, args.layout, args.seed + n)
         save_step(os.path.join(args.out, f"step_{n:06d}.npz"), *packed)
+        event(log, logging.DEBUG, "step_packed", step=n, documents=len(steps[n]),
+              rows=int(packed[0].shape[0] * packed[0].shape[1]))
+    event(log, logging.INFO, "pack_done", steps=len(steps), out=args.out, layout=args.layout, ctx=args.ctx,
+          micro_batches=args.micro_batches)
     print(f"packed {len(steps)} steps into {args.out}")
 
 
