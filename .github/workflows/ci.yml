@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.9.5"
+          enable-cache: true
+      - run: uv sync --frozen --python 3.12
+      - run: uv run --frozen ruff check .
+
+  test:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+    env:
+      OMP_NUM_THREADS: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.9.5"
+          enable-cache: true
+      - run: uv sync --frozen --python ${{ matrix.python-version }}
+      - run: uv run --frozen pytest -q
+
+  docker:
+    runs-on: ubuntu-24.04
+    needs: [lint]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: packlm:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Smoke run inside the image
+        run: |
+          docker run --rm --entrypoint sh packlm:ci -c '
+            python -m lm.pack --docs data/smoke/corpus.jsonl --ctx 32 --micro-batches 2 --out data/smoke/shards &&
+            python -m lm.init --config configs/smoke.toml --seed 0 &&
+            python -m lm.train --config configs/smoke.toml'
