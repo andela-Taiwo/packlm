@@ -1,0 +1,45 @@
+name: Bug report
+description: Something doesn't behave as the docs describe.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for reporting. Please search existing issues first.
+  - type: textarea
+    id: command
+    attributes:
+      label: What you ran
+      description: The exact command(s) and the config file.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+      description: If docs/ says what should happen, quote or link the relevant part.
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened
+      description: Step lines, error message or traceback.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Python version, OS and CPU architecture, torch and numpy versions.
+      placeholder: |
+        Python 3.12.7, macOS 15 (arm64), torch 2.8.0, numpy 2.3.3
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs (optional)
+      description: Rerun with LM_LOG_LEVEL=DEBUG and paste stderr.
+      render: json
